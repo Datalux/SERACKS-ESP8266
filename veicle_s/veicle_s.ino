@@ -58,7 +58,7 @@ void handleResponse(){
   Serial.println(result);
   
   char input[SHA256HMAC_SIZE+1];
-  server.arg(0).toCharArray(input, SHA256HMAC_SIZE)  ;
+  server.arg(0).toCharArray(input, SHA256HMAC_SIZE);
   String resp;
   if(strcmp(result, input) != 0){
     resp = "ok!\r\n";
