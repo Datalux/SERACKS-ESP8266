@@ -2,9 +2,14 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include "ESP8266TrueRandom.h"
+#include "Crypto.h"
 
 #define N 14
 #define M 5
+
+#define KEY_LENGTH 16
+
+byte key[KEY_LENGTH] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
 
 const char* ssid = "ESP_D54736"; 
 
@@ -36,9 +41,26 @@ void handleResponse(){
   int _nv = __f__(Nv);
   int _nf = __g__(Nf);
 
-  String resp;
+  SHA256HMAC hmac(key, KEY_LENGTH);
+  hmac.doUpdate(Nv+"0");
+ 
+  byte authCode[SHA256HMAC_SIZE];
+  hmac.doFinal(authCode);
 
-  if( _nv == server.arg(0).toInt() && _nf == server.arg(1).toInt()){
+  char result[SHA256HMAC_SIZE];
+
+  Serial.println();
+  /* authCode now contains our 32 byte authentication code */
+  for (byte i=0; i < SHA256HMAC_SIZE; i++){
+    result[i] = (char)authCode[i];
+  }
+  
+  Serial.println(result);
+  
+  char input[SHA256HMAC_SIZE+1];
+  server.arg(0).toCharArray(input, SHA256HMAC_SIZE)  ;
+  String resp;
+  if(strcmp(result, input) != 0){
     resp = "ok!\r\n";
   } else {
     resp = "no!\r\n";
