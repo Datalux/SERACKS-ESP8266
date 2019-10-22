@@ -12,6 +12,7 @@ const char *ssid = "ESP_D54736";
 
 ESP8266WebServer server(80);
 
+boolean can_open = false;
 
 int Nv, Nf;
 
@@ -46,6 +47,8 @@ void handleRequest()
   Nv = ESP8266TrueRandom.rand();
   Nf = ESP8266TrueRandom.rand();
 
+  can_open = true;
+  
   Serial.println(String("\n\nSending challenge... ") + Nv + " " + Nf);
   
   String resp = (String)Nv + "," + (String)Nf + "\r\n";
@@ -57,47 +60,51 @@ void handleResponse()
     
   Serial.println("Received new response...");
 
-  int _nv = __f__(Nv);
-  int _nf = __g__(Nf);
-
-  Serial.print("Server's Nv: ");
-  Serial.println(Nv);
-  Serial.print("Server's Nf: ");
-  Serial.println(Nf);
-
-  String in = String("") + Nv;
-  int in_len = in.length();
-  char input[in_len+1];
-  in.toCharArray(input, in_len+1);
-  input[in_len] = '\0';  
-  SHA256HMAC hmac(keys[__f__(Nv)], KEY_LENGTH);
-
-  hmac.doUpdate(input);
-
-  byte authCode[SHA256HMAC_SIZE];
-  hmac.doFinal(authCode);
+  if(can_open){
+    int _nv = __f__(Nv);
+    int _nf = __g__(Nf);
   
-  Serial.println("");
-  Serial.print("Encrypted: ");
+    Serial.print("Server's Nv: ");
+    Serial.println(Nv);
+    Serial.print("Server's Nf: ");
+    Serial.println(Nf);
   
-  char auth_str[(SHA256HMAC_SIZE*2)+1];
-  array_to_string(authCode, SHA256HMAC_SIZE, auth_str);
+    String in = String("") + Nv;
+    int in_len = in.length();
+    char input[in_len+1];
+    in.toCharArray(input, in_len+1);
+    input[in_len] = '\0';  
+    SHA256HMAC hmac(keys[__f__(Nv)], KEY_LENGTH);
   
-  Serial.println(auth_str);
+    hmac.doUpdate(input);
   
-
-  Serial.print("Client's Nv: ");
-  Serial.println(server.arg(0));
+    byte authCode[SHA256HMAC_SIZE];
+    hmac.doFinal(authCode);
+    
+    Serial.println("");
+    Serial.print("Encrypted: ");
+    
+    char auth_str[(SHA256HMAC_SIZE*2)+1];
+    array_to_string(authCode, SHA256HMAC_SIZE, auth_str);
+    
+    Serial.println(auth_str);
+    
   
-  String resp;
-  
-  if(server.arg(0).equals(auth_str)){
-   resp = "ok!\r\n";
-   } else {
-    resp = "no!\r\n";
+    Serial.print("Client's Nv: ");
+    Serial.println(server.arg(0));
+    
+    String resp;
+    
+    if(server.arg(0).equals(auth_str)){
+     resp = "ok!\r\n";
+     } else {
+      resp = "no!\r\n";
+    }
+    Serial.println(resp);
+    server.send(200, "text/plain", resp);
+  } else{
+    server.send(200, "text/plain", "not authorized");
   }
-  Serial.println(resp);
-  server.send(200, "text/plain", resp);
 }
 
 
