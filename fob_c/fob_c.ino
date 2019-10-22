@@ -2,10 +2,15 @@
 #include <WiFiClient.h> 
 #include "Crypto.h"
 
-#define N 14
-#define M 5
+#define N 5
+#define M 1
 
 #define KEY_LENGTH 16
+
+const char *host = "192.168.4.1"; 
+
+int __f__(int v){ return v % N; }
+int __g__(int v){ return v % M; }
 
 
 byte keys[N][KEY_LENGTH] = {
@@ -16,11 +21,6 @@ byte keys[N][KEY_LENGTH] = {
   {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}  
 };
 
-const char *host = "192.168.4.1"; 
-bool ok = false;
-
-int __f__(int v){ return v % N; }
-int __g__(int v){ return v % M; }
 
 void array_to_string(byte array[], unsigned int len, char buffer[])
 {
@@ -34,8 +34,8 @@ void array_to_string(byte array[], unsigned int len, char buffer[])
     buffer[len*2] = '\0';
 }
 
-
-void _run(){
+void _run()
+{
   digitalWrite(BUILTIN_LED, HIGH);
   
   Serial.print("connecting to ");
@@ -84,15 +84,20 @@ void _run(){
 
   delay(2000);
 
+ 
   String in = String("") +v[0];
   int in_len = in.length();
   char input[in_len+1];
   in.toCharArray(input, in_len+1);
   input[in_len] = '\0';
 
-  SHA256HMAC hmac(keys[__f__(Nv)], KEY_LENGTH);
+  SHA256HMAC hmac(keys[__f__(v[0])], KEY_LENGTH);
 
-  hmac.doUpdate(input);
+  char str[12];
+  sprintf(str, "%d", v[0]);
+  Serial.print("Encrypt: ");
+  Serial.println(str);
+  hmac.doUpdate(str);
 
   byte authCode[SHA256HMAC_SIZE];
   hmac.doFinal(authCode);
@@ -129,12 +134,11 @@ void _run(){
   Serial.println();
   Serial.println(l);
   digitalWrite(BUILTIN_LED, LOW);
-
-  
   
 }
 
-void setup() {
+void setup()
+{
   pinMode(BUILTIN_LED, OUTPUT);
   Serial.begin(115200);          
   delay(10);                     
@@ -154,9 +158,8 @@ void setup() {
 
 
 
-void loop() {
+void loop()
+{
   _run();
-  delay(5000);
-
-  
+  delay(5000);  
 }

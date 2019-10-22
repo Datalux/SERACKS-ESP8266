@@ -8,12 +8,15 @@
 #define M 1 
 #define KEY_LENGTH 16
 
-const char *ssid = "ESP_D54736"; 
+const char *ssid = "ESP_D54736";
+
+ESP8266WebServer server(80);
+
+
+int Nv, Nf;
 
 int __f__(int v){ return v % N; }
 int __g__(int v){ return v % M; }
-
-int Nv, Nf;
 
 byte keys[N][KEY_LENGTH] = {
   {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
@@ -24,13 +27,9 @@ byte keys[N][KEY_LENGTH] = {
 };
 
 
-ESP8266WebServer server(80);  
-
-
 void array_to_string(byte array[], unsigned int len, char buffer[])
 {
-    for (unsigned int i = 0; i < len; i++)
-    {
+    for (unsigned int i = 0; i < len; i++){
         byte nib1 = (array[i] >> 4) & 0x0F;
         byte nib2 = (array[i] >> 0) & 0x0F;
         buffer[i*2+0] = nib1  < 0xA ? '0' + nib1  : 'A' + nib1  - 0xA;
@@ -39,7 +38,8 @@ void array_to_string(byte array[], unsigned int len, char buffer[])
     buffer[len*2] = '\0';
 }
 
-void handleRequest(){
+void handleRequest()
+{
 
   Serial.println("Received new request...");
   
@@ -52,7 +52,8 @@ void handleRequest(){
   server.send(200, "text/plain", resp);
 }
 
-void handleResponse(){
+void handleResponse()
+{
     
   Serial.println("Received new response...");
 
@@ -68,8 +69,7 @@ void handleResponse(){
   int in_len = in.length();
   char input[in_len+1];
   in.toCharArray(input, in_len+1);
-  input[in_len] = '\0';
-
+  input[in_len] = '\0';  
   SHA256HMAC hmac(keys[__f__(Nv)], KEY_LENGTH);
 
   hmac.doUpdate(input);
@@ -101,7 +101,8 @@ void handleResponse(){
 }
 
 
-void setup() {
+void setup() 
+{
   delay(200);                           
   Serial.begin(115200);                 
   pinMode(2, OUTPUT);                   
@@ -117,6 +118,7 @@ void setup() {
   
 }
 
-void loop() {
+void loop()
+{
   server.handleClient();
 }
