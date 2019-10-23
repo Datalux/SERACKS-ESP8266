@@ -7,6 +7,8 @@
 
 #define KEY_LENGTH 16
 
+#define interruptPin 13
+
 const char *host = "192.168.4.1"; 
 
 int __f__(int v){ return v % N; }
@@ -141,7 +143,9 @@ void setup()
 {
   pinMode(BUILTIN_LED, OUTPUT);
   Serial.begin(115200);          
-  delay(10);                     
+  delay(10);   
+  pinMode(interruptPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(interruptPin), _run, FALLING);                  
   WiFi.mode(WIFI_STA);           
   WiFi.begin("ESP_D54736");      
 
@@ -160,6 +164,6 @@ void setup()
 
 void loop()
 {
-  _run();
-  delay(5000);  
+  /*_run();
+  delay(5000); */ 
 }
