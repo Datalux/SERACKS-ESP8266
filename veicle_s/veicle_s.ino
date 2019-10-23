@@ -105,6 +105,8 @@ void handleResponse()
   } else{
     server.send(200, "text/plain", "not authorized");
   }
+  
+  can_open = false;
 }
 
 
