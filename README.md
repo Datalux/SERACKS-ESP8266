@@ -10,5 +10,7 @@ Simple implementation of SERACKS protocol in two ESP8266.
 - D2
 - 3v3
 - GND
+
+
 ![Circuit](circuit.jpg)
 
