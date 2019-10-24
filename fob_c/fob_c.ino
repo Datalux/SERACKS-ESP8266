@@ -7,8 +7,13 @@
 
 #define KEY_LENGTH 16
 
-#define interruptPin 13
+#define STATUS_IDLE  0
+#define STATUS_REQ   1
 
+int status = 0;
+
+uint8_t GPIO_Pin = D2;
+  
 const char *host = "192.168.4.1"; 
 
 int __f__(int v){ return v % N; }
@@ -36,8 +41,14 @@ void array_to_string(byte array[], unsigned int len, char buffer[])
     buffer[len*2] = '\0';
 }
 
+void setReqStatus()
+{
+  status = STATUS_REQ;
+}
+
 void _run()
 {
+   
   digitalWrite(BUILTIN_LED, HIGH);
   
   Serial.print("connecting to ");
@@ -47,6 +58,7 @@ void _run()
   const int httpPort = 80;
   if (!client.connect("192.168.4.1", httpPort)) {
     Serial.println("connection failed");
+    status = STATUS_IDLE;
     return;
   }    
 
@@ -55,8 +67,9 @@ void _run()
                "Connection: close\r\n\r\n");   
 
 
-  Serial.println(String("Waiting for response..."));
-  delay(2000);
+  Serial.println(String("Waiting for challenge..."));
+  
+  delay(1000);
 
   int v[2];
   int i = 0;
@@ -84,7 +97,7 @@ void _run()
   Serial.println();
   Serial.println("End request\n"); 
 
-  delay(2000);
+  delay(1000);
 
  
   String in = String("") +v[0];
@@ -115,8 +128,9 @@ void _run()
   Serial.println("Sending response...");
   if (!client.connect("192.168.4.1", httpPort)) {
     Serial.println("connection failed");
+    status = STATUS_IDLE;
     return;
-  }  
+  }     
 
 
   //String param = String("?i=")+ __f__(v[0]) + "&j=" + __g__(v[1]);
@@ -136,16 +150,18 @@ void _run()
   Serial.println();
   Serial.println(l);
   digitalWrite(BUILTIN_LED, LOW);
+
+  status = STATUS_IDLE;
   
 }
 
 void setup()
 {
-  pinMode(BUILTIN_LED, OUTPUT);
   Serial.begin(115200);          
   delay(10);   
-  pinMode(interruptPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(interruptPin), _run, FALLING);                  
+  pinMode(19, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(GPIO_Pin), setReqStatus, FALLING);   
+  
   WiFi.mode(WIFI_STA);           
   WiFi.begin("ESP_D54736");      
 
@@ -157,13 +173,17 @@ void setup()
   Serial.println("WiFi connected");  
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());  
-
+  pinMode(BUILTIN_LED, OUTPUT);            
+  
 }
 
 
 
 void loop()
 {
+  if(status == STATUS_REQ){
+    _run();
+  }
   /*_run();
-  delay(5000); */ 
+  delay(5000); */
 }
