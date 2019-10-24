@@ -69,7 +69,7 @@ void _run()
 
   Serial.println(String("Waiting for challenge..."));
   
-  delay(1000);
+  delay(1000);  
 
   int v[2];
   int i = 0;

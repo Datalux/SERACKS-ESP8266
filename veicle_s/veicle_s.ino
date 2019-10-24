@@ -99,6 +99,7 @@ void handleResponse()
      resp = "ok!\r\n";
      } else {
       resp = "no!\r\n";
+      can_open = false;
     }
     Serial.println(resp);
     server.send(200, "text/plain", resp);
