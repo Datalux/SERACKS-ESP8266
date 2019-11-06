@@ -3,7 +3,6 @@
 #include "Crypto.h"
 
 #define N 5
-#define M 1
 
 #define KEY_LENGTH 16
 
@@ -17,7 +16,7 @@ uint8_t GPIO_Pin = D2;
 const char *host = "192.168.4.1"; 
 
 int __f__(int v){ return v % N; }
-int __g__(int v){ return v % M; }
+int __g__(int v){ return v + 1; }
 
 
 byte keys[N][KEY_LENGTH] = {
@@ -98,7 +97,6 @@ void _run()
   Serial.println("End request\n"); 
 
   delay(1000);
-
  
   String in = String("") +v[0];
   int in_len = in.length();
@@ -109,7 +107,7 @@ void _run()
   SHA256HMAC hmac(keys[__f__(v[0])], KEY_LENGTH);
 
   char str[12];
-  sprintf(str, "%d", v[0]);
+  sprintf(str, "%d", __g__(v[0]));
   Serial.print("Encrypt: ");
   Serial.println(str);
   hmac.doUpdate(str);
@@ -133,7 +131,6 @@ void _run()
   }     
 
 
-  //String param = String("?i=")+ __f__(v[0]) + "&j=" + __g__(v[1]);
   String param = String("?i=")+ auth_str;
   client.print(String("GET ") +"/response"+ param + " HTTP/1.1\r\n" + 
              "Host: " + host + "\r\n" + 
@@ -184,6 +181,4 @@ void loop()
   if(status == STATUS_REQ){
     _run();
   }
-  /*_run();
-  delay(5000); */
 }
