@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h> 
 #include "Crypto.h"
+#include "base64.hpp"
 
 #define N 5
 
@@ -27,6 +28,26 @@ byte keys[N][KEY_LENGTH] = {
   {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}  
 };
 
+uint8_t iv[KEY_LENGTH] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+void bufferSize(char* text, int &length)
+{
+  int i = strlen(text);
+  int buf = round(i / KEY_LENGTH) * KEY_LENGTH;
+  length = (buf <= i) ? buf + KEY_LENGTH : length = buf;
+}
+    
+void encrypt(char* plain_text, char* output, int length, byte *key)
+{
+  byte enciphered[length];
+  RNG::fill(iv, KEY_LENGTH); 
+  AES aesEncryptor(key, iv, AES::AES_MODE_128, AES::CIPHER_ENCRYPT);
+  aesEncryptor.process((uint8_t*)plain_text, enciphered, length);
+  int encrypted_size = sizeof(enciphered);
+  char encoded[encrypted_size];
+  encode_base64(enciphered, encrypted_size, (unsigned char*)encoded);
+  strcpy(output, encoded);
+}
 
 void array_to_string(byte array[], unsigned int len, char buffer[])
 {
@@ -104,24 +125,20 @@ void _run()
   in.toCharArray(input, in_len+1);
   input[in_len] = '\0';
 
-  SHA256HMAC hmac(keys[__f__(v[0])], KEY_LENGTH);
-
   char str[12];
   sprintf(str, "%d", __g__(v[0]));
   Serial.print("Encrypt: ");
   Serial.println(str);
-  hmac.doUpdate(str);
 
-  byte authCode[SHA256HMAC_SIZE];
-  hmac.doFinal(authCode);
+  // encrypt
+  int length = 0;
+  bufferSize(str, length);
+  char auth_str[length];
+  encrypt(str, auth_str, length, keys[__f__(v[0])]);
 
   Serial.println("");
-  Serial.print("Encrypted: ");  
-
-  char auth_str[(SHA256HMAC_SIZE*2)+1];
-  array_to_string(authCode, SHA256HMAC_SIZE, auth_str);
-
-  Serial.println(auth_str);
+  Serial.print("Encrypted: ");
+  Serial.println(auth_str); 
 
   Serial.println("Sending response...");
   if (!client.connect("192.168.4.1", httpPort)) {
