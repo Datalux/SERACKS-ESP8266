@@ -3,6 +3,7 @@
 #include <ESP8266WebServer.h>
 #include "ESP8266TrueRandom.h"
 #include "Crypto.h"
+#include "base64.hpp"
 
 #define N 5
 #define M 1 
@@ -17,7 +18,7 @@ boolean can_open = false;
 int Nv, Nf;
 
 int __f__(int v){ return v % N; }
-int __g__(int v){ return v % M; }
+int __g__(int v){ return v + 1; }
 
 byte keys[N][KEY_LENGTH] = {
   {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
@@ -26,6 +27,8 @@ byte keys[N][KEY_LENGTH] = {
   {3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
   {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}  
 };
+
+uint8_t iv[KEY_LENGTH] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 
 void array_to_string(byte array[], unsigned int len, char buffer[])
@@ -37,6 +40,25 @@ void array_to_string(byte array[], unsigned int len, char buffer[])
         buffer[i*2+1] = nib2  < 0xA ? '0' + nib2  : 'A' + nib2  - 0xA;
     }
     buffer[len*2] = '\0';
+}
+
+void bufferSize(char* text, int &length)
+{
+  int i = strlen(text);
+  int buf = round(i / KEY_LENGTH) * KEY_LENGTH;
+  length = (buf <= i) ? buf + KEY_LENGTH : length = buf;
+}
+    
+void encrypt(char* plain_text, char* output, int length, byte *key)
+{
+  byte enciphered[length];
+  RNG::fill(iv, KEY_LENGTH); 
+  AES aesEncryptor(key, iv, AES::AES_MODE_128, AES::CIPHER_ENCRYPT);
+  aesEncryptor.process((uint8_t*)plain_text, enciphered, length);
+  int encrypted_size = sizeof(enciphered);
+  char encoded[encrypted_size];
+  encode_base64(enciphered, encrypted_size, (unsigned char*)encoded);
+  strcpy(output, encoded);
 }
 
 void handleRequest()
@@ -69,26 +91,28 @@ void handleResponse()
     Serial.print("Server's Nf: ");
     Serial.println(Nf);
   
-    String in = String("") + Nv;
+    /*String in = String("") + _nf;
     int in_len = in.length();
     char input[in_len+1];
     in.toCharArray(input, in_len+1);
-    input[in_len] = '\0';  
-    SHA256HMAC hmac(keys[__f__(Nv)], KEY_LENGTH);
+    input[in_len] = '\0';*/ 
+
+    char str[12];
+    sprintf(str, "%d", _nf);
+    Serial.print("Encrypt: ");
+    Serial.println(str);
+
+    // encrypt
+    int length = 0;
+    bufferSize(str, length);
+    char auth_str [length];
+    encrypt(str, auth_str, length, keys[_nv]);
   
-    hmac.doUpdate(input);
-  
-    byte authCode[SHA256HMAC_SIZE];
-    hmac.doFinal(authCode);
-    
     Serial.println("");
     Serial.print("Encrypted: ");
-    
-    char auth_str[(SHA256HMAC_SIZE*2)+1];
-    array_to_string(authCode, SHA256HMAC_SIZE, auth_str);
-    
     Serial.println(auth_str);
-    
+
+    Serial.println("");
   
     Serial.print("Client's Nv: ");
     Serial.println(server.arg(0));
