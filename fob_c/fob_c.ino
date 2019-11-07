@@ -119,11 +119,11 @@ void _run()
 
   delay(1000);
  
-  String in = String("") +v[0];
+  /*String in = String("") +__g__(v[0]);
   int in_len = in.length();
   char input[in_len+1];
   in.toCharArray(input, in_len+1);
-  input[in_len] = '\0';
+  input[in_len] = '\0';*/
 
   char str[12];
   sprintf(str, "%d", __g__(v[0]));
