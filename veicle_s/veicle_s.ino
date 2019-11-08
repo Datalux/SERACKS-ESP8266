@@ -9,7 +9,7 @@
 #define M 1 
 #define KEY_LENGTH 16
 
-const char *ssid = "VEICLE";
+const char *ssid = "VEHICLE";
 
 ESP8266WebServer server(80);
 
@@ -27,9 +27,6 @@ byte keys[N][KEY_LENGTH] = {
   {3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18},
   {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}  
 };
-
-uint8_t iv[KEY_LENGTH] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
 
 void array_to_string(byte array[], unsigned int len, char buffer[])
 {
@@ -49,16 +46,37 @@ void bufferSize(char* text, int &length)
   length = (buf <= i) ? buf + KEY_LENGTH : length = buf;
 }
     
-void encrypt(char* plain_text, char* output, int length, byte *key)
+void encrypt(char* plain_text, char* output, int length, byte *key, uint8_t *iv)
 {
   byte enciphered[length];
-  RNG::fill(iv, KEY_LENGTH); 
+  //RNG::fill(iv, KEY_LENGTH); 
   AES aesEncryptor(key, iv, AES::AES_MODE_128, AES::CIPHER_ENCRYPT);
   aesEncryptor.process((uint8_t*)plain_text, enciphered, length);
   int encrypted_size = sizeof(enciphered);
   char encoded[encrypted_size];
   encode_base64(enciphered, encrypted_size, (unsigned char*)encoded);
   strcpy(output, encoded);
+}
+
+void decrypt(char* enciphered, char* output, int length, byte *key, uint8_t *iv)
+{
+  length = length + 1; //re-adjust
+  char decoded[length];
+  decode_base64((unsigned char*)enciphered, (unsigned char*)decoded);
+  bufferSize(enciphered, length);
+  byte deciphered[length];
+  AES aesDecryptor(key, iv, AES::AES_MODE_128, AES::CIPHER_DECRYPT);
+  aesDecryptor.process((uint8_t*)decoded, deciphered, length);
+  strcpy(output, (char*)deciphered);
+}
+
+char* string2char(String ipString){ // make it to return pointer not a single char
+  char* opChar = new char[ipString.length() + 1]; // local array should not be returned as it will be destroyed outside of the scope of this function. So create it with new operator.
+  memset(opChar, 0, ipString.length() + 1);
+
+  for (int i = 0; i < ipString.length(); i++)
+    opChar[i] = ipString.charAt(i);
+  return opChar; //Add this return statement.
 }
 
 void handleRequest()
@@ -97,22 +115,44 @@ void handleResponse()
     in.toCharArray(input, in_len+1);
     input[in_len] = '\0';*/ 
 
+    uint8_t iv[KEY_LENGTH] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+
     char str[12];
     sprintf(str, "%d", _nf);
     Serial.print("Encrypt: ");
     Serial.println(str);
+    Serial.println(String("with key: ") + _nv);
 
     // encrypt
     int length = 0;
     bufferSize(str, length);
     char auth_str [length];
-    encrypt(str, auth_str, length, keys[_nv]);
+    encrypt(str, auth_str, length, keys[_nv], iv);
   
     Serial.println("");
     Serial.print("Encrypted: ");
     Serial.println(auth_str);
 
     Serial.println("");
+
+    // decrypt
+    /*char *server_input = string2char(server.arg(0));
+    length = strlen(server_input);
+    char decrypted[length];
+    decrypt(server_input, decrypted, length, keys[_nv], iv);
+  
+    Serial.print("Decrypted: ");
+    Serial.println(decrypted);*/
+
+    /*length = server.arg(0).length();
+    char server_input[length+1];
+    server.arg(0).toCharArray(server_input, length+1);
+    char decrypted[length+1];
+    decrypt(server_input, decrypted, length+1, keys[_nv]);
+  
+    Serial.print("Decrypted: ");
+    Serial.println(decrypted);*/
   
     Serial.print("Client's Nv: ");
     Serial.println(server.arg(0));
@@ -139,7 +179,8 @@ void setup()
 {
   delay(200);                           
   Serial.begin(115200);                 
-  pinMode(2, OUTPUT);                   
+  pinMode(2, OUTPUT); 
+  WiFi.disconnect();                  
   WiFi.softAP(ssid);
 
   IPAddress myIP = WiFi.softAPIP();     

@@ -28,7 +28,6 @@ byte keys[N][KEY_LENGTH] = {
   {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}  
 };
 
-uint8_t iv[KEY_LENGTH] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 void bufferSize(char* text, int &length)
 {
@@ -37,16 +36,28 @@ void bufferSize(char* text, int &length)
   length = (buf <= i) ? buf + KEY_LENGTH : length = buf;
 }
     
-void encrypt(char* plain_text, char* output, int length, byte *key)
+void encrypt(char* plain_text, char* output, int length, byte *key, uint8_t *iv)
 {
   byte enciphered[length];
-  RNG::fill(iv, KEY_LENGTH); 
+  //RNG::fill(iv, KEY_LENGTH); 
   AES aesEncryptor(key, iv, AES::AES_MODE_128, AES::CIPHER_ENCRYPT);
   aesEncryptor.process((uint8_t*)plain_text, enciphered, length);
   int encrypted_size = sizeof(enciphered);
   char encoded[encrypted_size];
   encode_base64(enciphered, encrypted_size, (unsigned char*)encoded);
   strcpy(output, encoded);
+}
+
+void decrypt(char* enciphered, char* output, int length, byte *key, uint8_t *iv)
+{
+  length = length + 1; //re-adjust
+  char decoded[length];
+  decode_base64((unsigned char*)enciphered, (unsigned char*)decoded);
+  bufferSize(enciphered, length);
+  byte deciphered[length];
+  AES aesDecryptor(key, iv, AES::AES_MODE_128, AES::CIPHER_DECRYPT);
+  aesDecryptor.process((uint8_t*)decoded, deciphered, length);
+  strcpy(output, (char*)deciphered);
 }
 
 void array_to_string(byte array[], unsigned int len, char buffer[])
@@ -111,14 +122,16 @@ void _run()
       p = strtok (NULL, ",");
   }
     
-  Serial.println(String("i = ") + v[0]);
-  Serial.println(String("j = ") + v[1]);
+  Serial.println(String("Nv = ") + v[0]);
+  Serial.println(String("Nf = ") + v[1]);
 
   Serial.println();
   Serial.println("End request\n"); 
 
   delay(1000);
- 
+
+  uint8_t iv[KEY_LENGTH] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
   /*String in = String("") +__g__(v[0]);
   int in_len = in.length();
   char input[in_len+1];
@@ -126,20 +139,21 @@ void _run()
   input[in_len] = '\0';*/
 
   char str[12];
-  sprintf(str, "%d", __g__(v[0]));
-  Serial.print("Encrypt: ");
+  sprintf(str, "%d", __g__(v[1]));
+  Serial.print("Encrypt z: ");
   Serial.println(str);
+  Serial.println(String("with key: ") + __f__(v[0]));
 
   // encrypt
   int length = 0;
   bufferSize(str, length);
   char auth_str[length];
-  encrypt(str, auth_str, length, keys[__f__(v[0])]);
+  encrypt(str, auth_str, length, keys[__f__(v[0])], iv);
 
   Serial.println("");
   Serial.print("Encrypted: ");
   Serial.println(auth_str); 
-
+  
   Serial.println("Sending response...");
   if (!client.connect("192.168.4.1", httpPort)) {
     Serial.println("connection failed");
@@ -176,8 +190,9 @@ void setup()
   pinMode(19, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(GPIO_Pin), setReqStatus, FALLING);   
   
+  //WiFi.disconnect();
   WiFi.mode(WIFI_STA);           
-  WiFi.begin("ESP_D54736");      
+  WiFi.begin("VEHICLE");      
 
   while (WiFi.status() != WL_CONNECTED) {     
     delay(500);
