@@ -12,5 +12,5 @@ Simple implementation of SERACKS protocol in two ESP8266.
 - GND
 
 
-![Circuit](circuit.jpg)
+![Circuit](scheme.png)
 
